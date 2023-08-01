@@ -8,16 +8,15 @@ const (
 )
 
 const (
-	G = 1.25
-
 	PIPE_WIDTH       = 100
-	PIPE_SPEED       = 2
+	PIPE_SPEED       = 4
 	PIPE_GAP_SIZE    = 150
-	PIPE_SPAWN_SPEED = 5
+	PIPE_SPAWN_SPEED = 3
 
-	PLAYER_SPEED = 1
-	PLAYER_SIZE  = 25
-	PLAYER_JUMP  = 30
+	G = 2.15
+
+	PLAYER_SIZE = 25
+	PLAYER_JUMP = 35
 )
 
 type Pipe struct {
@@ -57,6 +56,10 @@ func DrawGame() {
 	}
 
 	if has_lost {
+		game_over_text, font_size := "GAME OVER", int32(32)
+		rl.DrawText(game_over_text, SCREEN_WIDTH/2-rl.MeasureText(game_over_text, font_size)/2, SCREEN_HEIGHT/2-16, font_size, rl.Red)
+		game_over_instructions, font_size := "Press Enter to restart", int32(24)
+		rl.DrawText(game_over_instructions, SCREEN_WIDTH/2-rl.MeasureText(game_over_instructions, font_size)/2, SCREEN_HEIGHT/2+16, font_size, rl.Gray)
 	}
 }
 
@@ -66,7 +69,7 @@ func UpdateGame() {
 	if !has_lost {
 		spawn_frame_counter++
 
-		if spawn_frame_counter%(1000/PIPE_SPAWN_SPEED) == 0 {
+		if spawn_frame_counter%(1000/int(PIPE_SPAWN_SPEED*float32(PIPE_SPEED))) == 0 {
 			new_pipe := Pipe{
 				X: SCREEN_WIDTH,
 				Y: rl.GetRandomValue(PIPE_GAP_SIZE+PLAYER_SIZE, SCREEN_HEIGHT-PIPE_GAP_SIZE-PLAYER_SIZE),
@@ -86,7 +89,7 @@ func UpdateGame() {
 			pipe := &Pipes[i]
 			pipe.X -= PIPE_SPEED
 
-			r := float32(PLAYER_SIZE / 2)
+			r := float32(PLAYER_SIZE - 2) // allowance
 
 			if pipe.X+PIPE_WIDTH < 0 {
 				Pipes = append(Pipes[:i], Pipes[i+1:]...)
