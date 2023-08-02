@@ -1,6 +1,10 @@
 package main
 
-import rl "github.com/gen2brain/raylib-go/raylib"
+import (
+	"fmt"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
+)
 
 const (
 	SCREEN_WIDTH  = 800
@@ -13,7 +17,7 @@ const (
 	PIPE_GAP_SIZE    = 150
 	PIPE_SPAWN_SPEED = 3
 
-	G = 2.15
+	G = .1
 
 	PLAYER_SIZE = 25
 	PLAYER_JUMP = 35
@@ -22,11 +26,13 @@ const (
 type Pipe struct {
 	X int32
 	Y int32
+
+	Passed bool
 }
 
 type Player struct {
-	Position rl.Vector2
-	Angle    int32
+	Position   rl.Vector2
+	Fall_Speed float32
 }
 
 var (
@@ -34,14 +40,18 @@ var (
 	Pipes  = []Pipe{}
 )
 
-var has_lost bool = false
+var (
+	has_lost bool = false
+	score         = 0
+)
 
 func InitGame() {
 	has_lost = false
+	score = 0
 
 	PLAYER = Player{
-		Position: rl.NewVector2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2),
-		Angle:    0,
+		Position:   rl.NewVector2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2),
+		Fall_Speed: 0,
 	}
 
 	Pipes = []Pipe{}
@@ -61,6 +71,8 @@ func DrawGame() {
 		game_over_instructions, font_size := "Press Enter to restart", int32(24)
 		rl.DrawText(game_over_instructions, SCREEN_WIDTH/2-rl.MeasureText(game_over_instructions, font_size)/2, SCREEN_HEIGHT/2+16, font_size, rl.Gray)
 	}
+
+	rl.DrawText(fmt.Sprintf("Score: %d", score), 10, 10, 20, rl.DarkGreen)
 }
 
 var spawn_frame_counter = -1
@@ -71,8 +83,9 @@ func UpdateGame() {
 
 		if spawn_frame_counter%(1000/int(PIPE_SPAWN_SPEED*float32(PIPE_SPEED))) == 0 {
 			new_pipe := Pipe{
-				X: SCREEN_WIDTH,
-				Y: rl.GetRandomValue(PIPE_GAP_SIZE+PLAYER_SIZE, SCREEN_HEIGHT-PIPE_GAP_SIZE-PLAYER_SIZE),
+				X:      SCREEN_WIDTH,
+				Y:      rl.GetRandomValue(PIPE_GAP_SIZE+PLAYER_SIZE, SCREEN_HEIGHT-PIPE_GAP_SIZE-PLAYER_SIZE),
+				Passed: false,
 			}
 			Pipes = append(Pipes, new_pipe)
 
@@ -81,15 +94,17 @@ func UpdateGame() {
 
 		if rl.IsKeyPressed(rl.KeySpace) {
 			PLAYER.Position.Y -= PLAYER_JUMP
+			PLAYER.Fall_Speed = 0
 		} else {
-			PLAYER.Position.Y += G
+			PLAYER.Position.Y += PLAYER.Fall_Speed
+			PLAYER.Fall_Speed += G
 		}
 
 		for i := 0; i < len(Pipes); i++ {
 			pipe := &Pipes[i]
 			pipe.X -= PIPE_SPEED
 
-			r := float32(PLAYER_SIZE - 2) // allowance
+			r := float32(PLAYER_SIZE - 4) // allowance
 
 			if pipe.X+PIPE_WIDTH < 0 {
 				Pipes = append(Pipes[:i], Pipes[i+1:]...)
@@ -97,6 +112,9 @@ func UpdateGame() {
 				if PLAYER.Position.Y-r < float32(pipe.Y) || PLAYER.Position.Y+r > float32(pipe.Y+PIPE_GAP_SIZE) {
 					has_lost = true
 					break
+				} else if !pipe.Passed {
+					score++
+					pipe.Passed = true
 				}
 			}
 		}
